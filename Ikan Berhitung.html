@@ -1,0 +1,984 @@
+<!DOCTYPE html><html lang="en"><head><meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://code.jquery.com https://unpkg.com https://d3js.org https://threejs.org https://cdn.plot.ly https://stackpath.bootstrapcdn.com https://maps.googleapis.com https://cdn.tailwindcss.com https://ajax.googleapis.com https://kit.fontawesome.com https://cdn.datatables.net https://maxcdn.bootstrapcdn.com https://code.highcharts.com https://tako-static-assets-production.s3.amazonaws.com https://www.youtube.com https://fonts.googleapis.com https://fonts.gstatic.com https://pfst.cf2.poecdn.net https://puc.poecdn.net https://i.imgur.com https://wikimedia.org https://*.icons8.com https://*.giphy.com https://picsum.photos https://images.unsplash.com; frame-src 'self' https://www.youtube.com https://trytako.com; child-src 'self'; manifest-src 'self'; worker-src 'self'; upgrade-insecure-requests; block-all-mixed-content;">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Math Fish Game</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/flowbite/1.6.5/flowbite.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #5D5CDE;
+            --light-bg: #FFFFFF;
+            --dark-bg: #181818;
+            --light-text: #333333;
+            --dark-text: #F0F0F0;
+            --light-bubble: #E1F5FE;
+            --dark-bubble: #1E3A5F;
+            --correct-color: #4CAF50;
+            --wrong-color: #F44336;
+        }
+
+        body {
+            transition: background-color 0.3s, color 0.3s;
+            overflow: hidden;
+            touch-action: none;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            body {
+                background-color: var(--dark-bg);
+                color: var(--dark-text);
+            }
+            .answer-bubble {
+                background-color: var(--dark-bubble);
+                color: var(--dark-text);
+            }
+        }
+
+        @media (prefers-color-scheme: light) {
+            body {
+                background-color: var(--light-bg);
+                color: var(--light-text);
+            }
+            .answer-bubble {
+                background-color: var(--light-bubble);
+                color: var(--light-text);
+            }
+        }
+
+        #game-container {
+            position: relative;
+            overflow: hidden;
+            width: 100%;
+            height: 100vh;
+            touch-action: none;
+        }
+
+        #player {
+            position: absolute;
+            transition: width 0.3s, height 0.3s;
+            pointer-events: none;
+            transform-origin: center;
+            z-index: 10;
+        }
+
+        .answer-bubble {
+            position: absolute;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            cursor: pointer;
+            user-select: none;
+            font-size: 1rem;
+            transform-origin: center;
+        }
+
+        #problem-display {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            right: 10px;
+            padding: 10px;
+            font-size: 1.2rem;
+            background-color: rgba(0, 0, 0, 0.6);
+            color: white;
+            border-radius: 8px;
+            text-align: center;
+            z-index: 20;
+        }
+
+        #score-display {
+            position: absolute;
+            top: 60px;
+            left: 10px;
+            padding: 10px;
+            font-size: 1.2rem;
+            background-color: rgba(0, 0, 0, 0.6);
+            color: white;
+            border-radius: 8px;
+            z-index: 20;
+        }
+
+        #level-display {
+            position: absolute;
+            top: 60px;
+            right: 10px;
+            padding: 10px;
+            font-size: 1.2rem;
+            background-color: rgba(0, 0, 0, 0.6);
+            color: white;
+            border-radius: 8px;
+            z-index: 20;
+        }
+
+        #lives-display {
+            position: absolute;
+            top: 110px;
+            left: 10px;
+            padding: 10px;
+            font-size: 1.2rem;
+            background-color: rgba(0, 0, 0, 0.6);
+            color: white;
+            border-radius: 8px;
+            z-index: 20;
+        }
+
+        #game-over {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            z-index: 30;
+        }
+
+        #start-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            z-index: 30;
+        }
+
+        #game-controls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            justify-content: space-around;
+            width: 90%;
+            max-width: 500px;
+            z-index: 20;
+        }
+
+        @media (min-width: 768px) {
+            #game-controls {
+                display: none;
+            }
+        }
+
+        .control-btn {
+            width: 60px;
+            height: 60px;
+            background-color: rgba(93, 92, 222, 0.7);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: white;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+
+        .bubble-pop {
+            animation: pop 0.3s ease-out;
+        }
+
+        @keyframes pop {
+            0% { transform: scale(1); opacity: 1; }
+            100% { transform: scale(1.5); opacity: 0; }
+        }
+
+        .fish-eat {
+            animation: eat 0.3s ease-out;
+        }
+
+        @keyframes eat {
+            0% { transform: scale(1) rotate(0deg); }
+            50% { transform: scale(1.2) rotate(10deg); }
+            100% { transform: scale(1) rotate(0deg); }
+        }
+
+        #water-background {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            z-index: 1;
+        }
+
+        .water-bubble {
+            position: absolute;
+            border-radius: 50%;
+            background-color: rgba(255, 255, 255, 0.2);
+            animation: float linear infinite;
+            pointer-events: none;
+        }
+
+        @keyframes float {
+            0% { transform: translateY(0); opacity: 0; }
+            10% { opacity: 0.8; }
+            90% { opacity: 0.6; }
+            100% { transform: translateY(-100vh); opacity: 0; }
+        }
+
+        .seaweed {
+            position: absolute;
+            bottom: 0;
+            width: 30px;
+            height: 100px;
+            background-color: rgba(41, 171, 135, 0.5);
+            border-radius: 30px 30px 0 0;
+            transform-origin: bottom center;
+            animation: sway 5s ease-in-out infinite alternate;
+            z-index: 2;
+        }
+
+        @keyframes sway {
+            0% { transform: rotate(-10deg); }
+            100% { transform: rotate(10deg); }
+        }
+    </style>
+</head>
+<body class="m-0 p-0">
+    <div id="game-container">
+        <div id="water-background"></div>
+        
+        <div id="player">
+            <svg viewBox="0 0 100 60" width="100%" height="100%">
+                <path class="fish-body" d="M20 30 Q 40 10, 80 30 Q 40 50, 20 30" fill="#FF9F43" stroke="#E67E22" stroke-width="2"></path>
+                <circle class="fish-eye" cx="65" cy="25" r="5" fill="white"></circle>
+                <circle class="fish-pupil" cx="67" cy="25" r="2" fill="black"></circle>
+                <path class="fish-tail" d="M20 30 L 5 15 L 15 30 L 5 45 Z" fill="#FF9F43" stroke="#E67E22" stroke-width="2"></path>
+                <path class="fish-fin-top" d="M50 15 Q 60 5, 70 15" fill="none" stroke="#E67E22" stroke-width="2"></path>
+                <path class="fish-fin-bottom" d="M50 45 Q 60 55, 70 45" fill="none" stroke="#E67E22" stroke-width="2"></path>
+            </svg>
+        </div>
+
+        <div id="problem-display">Bersiap-siap...</div>
+        <div id="score-display">Skor: 0</div>
+        <div id="level-display">Level: 1</div>
+        <div id="lives-display">♥♥♥</div>
+
+        <div id="game-controls">
+            <div class="control-btn" id="btn-left">←</div>
+            <div class="control-btn" id="btn-up">↑</div>
+            <div class="control-btn" id="btn-down">↓</div>
+            <div class="control-btn" id="btn-right">→</div>
+        </div>
+
+        <div id="start-screen">
+            <h1 class="text-3xl font-bold mb-4">Ikan Matematika</h1>
+            <p class="text-lg mb-4">Makan jawaban yang benar untuk tumbuh!</p>
+            
+            <div class="mb-4 text-lg">
+                <p>Cara bermain:</p>
+                <ul class="text-base mt-2 text-left ml-4">
+                    <li class="mb-1">• Gerakkan ikan dengan tombol panah atau sentuh dan geser layar</li>
+                    <li class="mb-1">• Makan gelembung dengan jawaban yang benar</li>
+                    <li class="mb-1">• Hindari jawaban yang salah</li>
+                </ul>
+            </div>
+            
+            <div>
+                <label class="block mb-2 text-base">Pilih Tingkat Kesulitan:</label>
+                <select id="difficulty-select" class="text-base bg-gray-700 text-white rounded p-2 mb-6">
+                    <option value="easy">Mudah</option>
+                    <option value="medium">Sedang</option>
+                    <option value="hard">Sulit</option>
+                </select>
+            </div>
+            <button id="start-button" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded text-lg">
+                Mulai Bermain
+            </button>
+        </div>
+
+        <div id="game-over">
+            <h2 class="text-2xl font-bold mb-4">Game Over!</h2>
+            <p class="text-lg mb-2">Skor Akhir: <span id="final-score">0</span></p>
+            <p class="text-lg mb-6">Level: <span id="final-level">1</span></p>
+            <button id="restart-button" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded text-base">
+                Main Lagi
+            </button>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Game configuration
+            const config = {
+                playerStartSize: 50,
+                playerMinSize: 30,
+                playerMaxSize: 100,
+                playerMoveSpeed: 5,
+                bubbleMinSize: 40,
+                bubbleMaxSize: 60,
+                bubbleSpeed: {
+                    easy: { min: 0.5, max: 1.5 },
+                    medium: { min: 1, max: 2.5 },
+                    hard: { min: 1.5, max: 3.5 }
+                },
+                spawnInterval: {
+                    easy: 2000,
+                    medium: 1500,
+                    hard: 1000
+                },
+                maxBubbles: 8,
+                levelUpScore: 5,
+                eatCorrectPoints: 10,
+                eatWrongPenalty: 5,
+                growAmount: 5,
+                shrinkAmount: 10,
+                operations: {
+                    easy: ['+', '-'],
+                    medium: ['+', '-', '*'],
+                    hard: ['+', '-', '*', '/']
+                },
+                numberRange: {
+                    easy: { min: 1, max: 10 },
+                    medium: { min: 1, max: 20 },
+                    hard: { min: 1, max: 50 }
+                },
+                lives: 3
+            };
+
+            // Game state
+            let gameState = {
+                isGameRunning: false,
+                playerX: 0,
+                playerY: 0,
+                playerSize: config.playerStartSize,
+                playerDirection: 1, // 1 for right, -1 for left
+                score: 0,
+                level: 1,
+                bubbles: [],
+                currentProblem: null,
+                correctAnswer: null,
+                keysPressed: {},
+                spawnInterval: null,
+                animationId: null,
+                difficulty: 'easy',
+                lives: config.lives,
+                isTouchDevice: 'ontouchstart' in window || navigator.maxTouchPoints > 0,
+                touchTarget: null,
+                lastTouchX: 0,
+                lastTouchY: 0
+            };
+
+            // DOM Elements
+            const gameContainer = document.getElementById('game-container');
+            const player = document.getElementById('player');
+            const problemDisplay = document.getElementById('problem-display');
+            const scoreDisplay = document.getElementById('score-display');
+            const levelDisplay = document.getElementById('level-display');
+            const livesDisplay = document.getElementById('lives-display');
+            const startScreen = document.getElementById('start-screen');
+            const startButton = document.getElementById('start-button');
+            const difficultySelect = document.getElementById('difficulty-select');
+            const gameOverScreen = document.getElementById('game-over');
+            const finalScore = document.getElementById('final-score');
+            const finalLevel = document.getElementById('final-level');
+            const restartButton = document.getElementById('restart-button');
+            const waterBackground = document.getElementById('water-background');
+            
+            // Mobile controls
+            const btnLeft = document.getElementById('btn-left');
+            const btnUp = document.getElementById('btn-up');
+            const btnDown = document.getElementById('btn-down');
+            const btnRight = document.getElementById('btn-right');
+
+            // Initialize game
+            function initGame() {
+                // Reset game state
+                gameState.playerSize = config.playerStartSize;
+                gameState.score = 0;
+                gameState.level = 1;
+                gameState.bubbles = [];
+                gameState.lives = config.lives;
+                
+                // Center the player
+                resetPlayerPosition();
+                
+                // Update displays
+                updateScoreDisplay();
+                updateLevelDisplay();
+                updateLivesDisplay();
+                
+                // Generate first problem
+                generateNewProblem();
+                
+                // Create seaweed decorations
+                createSeaweed();
+                
+                // Start spawning bubbles
+                gameState.spawnInterval = setInterval(spawnBubble, 
+                    config.spawnInterval[gameState.difficulty]);
+                
+                // Start animation loop
+                gameState.isGameRunning = true;
+                if (gameState.animationId) {
+                    cancelAnimationFrame(gameState.animationId);
+                }
+                gameLoop();
+            }
+
+            function resetPlayerPosition() {
+                const containerRect = gameContainer.getBoundingClientRect();
+                gameState.playerX = containerRect.width / 2 - gameState.playerSize / 2;
+                gameState.playerY = containerRect.height / 2 - gameState.playerSize / 2;
+                updatePlayerPosition();
+            }
+
+            function createSeaweed() {
+                const containerRect = gameContainer.getBoundingClientRect();
+                const seaweedCount = Math.floor(containerRect.width / 100);
+                
+                // Remove existing seaweed
+                document.querySelectorAll('.seaweed').forEach(el => el.remove());
+                
+                // Create new seaweed
+                for (let i = 0; i < seaweedCount; i++) {
+                    const seaweed = document.createElement('div');
+                    seaweed.className = 'seaweed';
+                    seaweed.style.left = `${i * 100 + Math.random() * 50}px`;
+                    seaweed.style.height = `${80 + Math.random() * 120}px`;
+                    seaweed.style.width = `${20 + Math.random() * 20}px`;
+                    seaweed.style.animationDelay = `${Math.random() * 5}s`;
+                    gameContainer.appendChild(seaweed);
+                }
+            }
+
+            function createWaterBubbles() {
+                // Create ambient water bubbles
+                setInterval(() => {
+                    if (!gameState.isGameRunning) return;
+                    
+                    const containerRect = gameContainer.getBoundingClientRect();
+                    const bubble = document.createElement('div');
+                    bubble.className = 'water-bubble';
+                    
+                    const size = 5 + Math.random() * 15;
+                    const duration = 10 + Math.random() * 20;
+                    
+                    bubble.style.width = `${size}px`;
+                    bubble.style.height = `${size}px`;
+                    bubble.style.left = `${Math.random() * containerRect.width}px`;
+                    bubble.style.bottom = '0';
+                    bubble.style.animationDuration = `${duration}s`;
+                    
+                    waterBackground.appendChild(bubble);
+                    
+                    // Remove bubble after animation
+                    setTimeout(() => {
+                        if (bubble.parentNode) {
+                            bubble.parentNode.removeChild(bubble);
+                        }
+                    }, duration * 1000);
+                }, 500);
+            }
+
+            function generateNewProblem() {
+                const operations = config.operations[gameState.difficulty];
+                const operation = operations[Math.floor(Math.random() * operations.length)];
+                const range = config.numberRange[gameState.difficulty];
+                
+                let num1, num2, answer;
+                
+                // Generate numbers based on operation
+                switch (operation) {
+                    case '+':
+                        num1 = Math.floor(Math.random() * (range.max - range.min + 1)) + range.min;
+                        num2 = Math.floor(Math.random() * (range.max - range.min + 1)) + range.min;
+                        answer = num1 + num2;
+                        break;
+                    case '-':
+                        num1 = Math.floor(Math.random() * (range.max - range.min + 1)) + range.min;
+                        num2 = Math.floor(Math.random() * num1) + 1; // Ensure positive result
+                        answer = num1 - num2;
+                        break;
+                    case '*':
+                        // Make multiplication simpler
+                        num1 = Math.floor(Math.random() * 10) + 1;
+                        num2 = Math.floor(Math.random() * 10) + 1;
+                        answer = num1 * num2;
+                        break;
+                    case '/':
+                        // Make division result in whole numbers
+                        num2 = Math.floor(Math.random() * 9) + 1;
+                        answer = Math.floor(Math.random() * 10) + 1;
+                        num1 = num2 * answer;
+                        break;
+                }
+                
+                gameState.currentProblem = `${num1} ${operation} ${num2} = ?`;
+                gameState.correctAnswer = answer;
+                
+                problemDisplay.textContent = gameState.currentProblem;
+            }
+
+            function spawnBubble() {
+                if (!gameState.isGameRunning || gameState.bubbles.length >= config.maxBubbles) {
+                    return;
+                }
+                
+                const containerRect = gameContainer.getBoundingClientRect();
+                const bubble = document.createElement('div');
+                bubble.className = 'answer-bubble';
+                
+                // Random size within range
+                const size = Math.floor(Math.random() * 
+                    (config.bubbleMaxSize - config.bubbleMinSize + 1)) + config.bubbleMinSize;
+                
+                // Random position (ensure it's fully inside the container)
+                const maxX = containerRect.width - size;
+                const maxY = containerRect.height - size;
+                const x = Math.floor(Math.random() * maxX);
+                const y = Math.floor(Math.random() * maxY);
+                
+                // Set styles
+                bubble.style.width = `${size}px`;
+                bubble.style.height = `${size}px`;
+                bubble.style.left = `${x}px`;
+                bubble.style.top = `${y}px`;
+                
+                // Generate answer content
+                let answer;
+                if (Math.random() < 0.6) { // 60% chance for correct answer
+                    answer = gameState.correctAnswer;
+                    bubble.dataset.correct = 'true';
+                } else {
+                    // Generate wrong answer (not equal to correct answer)
+                    const offset = Math.floor(Math.random() * 10) + 1;
+                    answer = Math.random() < 0.5 ? 
+                        gameState.correctAnswer + offset : 
+                        Math.max(1, gameState.correctAnswer - offset);
+                    bubble.dataset.correct = 'false';
+                }
+                
+                bubble.textContent = answer;
+                
+                // Random movement speed and direction
+                const speedRange = config.bubbleSpeed[gameState.difficulty];
+                const dx = (Math.random() * (speedRange.max - speedRange.min) + speedRange.min) * 
+                    (Math.random() < 0.5 ? 1 : -1);
+                const dy = (Math.random() * (speedRange.max - speedRange.min) + speedRange.min) * 
+                    (Math.random() < 0.5 ? 1 : -1);
+                
+                // Add to game state
+                gameState.bubbles.push({
+                    element: bubble,
+                    x,
+                    y,
+                    dx,
+                    dy,
+                    size
+                });
+                
+                // Add to DOM
+                gameContainer.appendChild(bubble);
+            }
+
+            function moveBubbles() {
+                const containerRect = gameContainer.getBoundingClientRect();
+                
+                gameState.bubbles.forEach(bubble => {
+                    // Update position
+                    bubble.x += bubble.dx;
+                    bubble.y += bubble.dy;
+                    
+                    // Bounce off walls
+                    if (bubble.x <= 0 || bubble.x + bubble.size >= containerRect.width) {
+                        bubble.dx *= -1;
+                        bubble.x = Math.max(0, Math.min(bubble.x, containerRect.width - bubble.size));
+                    }
+                    
+                    if (bubble.y <= 0 || bubble.y + bubble.size >= containerRect.height) {
+                        bubble.dy *= -1;
+                        bubble.y = Math.max(0, Math.min(bubble.y, containerRect.height - bubble.size));
+                    }
+                    
+                    // Update DOM element
+                    bubble.element.style.left = `${bubble.x}px`;
+                    bubble.element.style.top = `${bubble.y}px`;
+                });
+            }
+
+            function checkCollisions() {
+                const playerCenterX = gameState.playerX + gameState.playerSize / 2;
+                const playerCenterY = gameState.playerY + gameState.playerSize / 2;
+                const playerRadius = gameState.playerSize / 2 * 0.8; // Collision radius is 80% of visual size
+                
+                for (let i = gameState.bubbles.length - 1; i >= 0; i--) {
+                    const bubble = gameState.bubbles[i];
+                    const bubbleCenterX = bubble.x + bubble.size / 2;
+                    const bubbleCenterY = bubble.y + bubble.size / 2;
+                    const bubbleRadius = bubble.size / 2;
+                    
+                    // Calculate distance between centers
+                    const dx = playerCenterX - bubbleCenterX;
+                    const dy = playerCenterY - bubbleCenterY;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    // Check if collision occurred
+                    if (distance < playerRadius + bubbleRadius) {
+                        // Handle collision
+                        const isCorrect = bubble.element.dataset.correct === 'true';
+                        handleBubbleEaten(bubble.element, isCorrect);
+                        
+                        // Remove bubble from game
+                        gameContainer.removeChild(bubble.element);
+                        gameState.bubbles.splice(i, 1);
+                    }
+                }
+            }
+
+            function handleBubbleEaten(bubbleElement, isCorrect) {
+                // Visual feedback
+                bubbleElement.classList.add('bubble-pop');
+                player.classList.add('fish-eat');
+                
+                setTimeout(() => {
+                    player.classList.remove('fish-eat');
+                }, 300);
+                
+                if (isCorrect) {
+                    // Correct answer eaten
+                    gameState.score += config.eatCorrectPoints;
+                    
+                    // Grow player
+                    gameState.playerSize = Math.min(config.playerMaxSize, 
+                        gameState.playerSize + config.growAmount);
+                    
+                    // Check for level up
+                    if (gameState.score >= gameState.level * config.levelUpScore) {
+                        levelUp();
+                    }
+                    
+                    // Generate new problem
+                    generateNewProblem();
+                } else {
+                    // Wrong answer eaten
+                    gameState.score = Math.max(0, gameState.score - config.eatWrongPenalty);
+                    
+                    // Shrink player
+                    gameState.playerSize = Math.max(config.playerMinSize, 
+                        gameState.playerSize - config.shrinkAmount);
+                    
+                    // Lose a life
+                    gameState.lives--;
+                    updateLivesDisplay();
+                    
+                    if (gameState.lives <= 0) {
+                        endGame();
+                    }
+                }
+                
+                // Update displays
+                updatePlayerSize();
+                updateScoreDisplay();
+            }
+
+            function levelUp() {
+                gameState.level++;
+                updateLevelDisplay();
+                
+                // Increase difficulty slightly
+                clearInterval(gameState.spawnInterval);
+                const newInterval = Math.max(500, 
+                    config.spawnInterval[gameState.difficulty] - (gameState.level * 100));
+                gameState.spawnInterval = setInterval(spawnBubble, newInterval);
+                
+                // Visual feedback
+                levelDisplay.classList.add('animate-pulse');
+                setTimeout(() => {
+                    levelDisplay.classList.remove('animate-pulse');
+                }, 1000);
+            }
+
+            function updatePlayerPosition() {
+                player.style.left = `${gameState.playerX}px`;
+                player.style.top = `${gameState.playerY}px`;
+                
+                // Flip fish based on direction
+                if (gameState.playerDirection === -1) {
+                    player.style.transform = 'scaleX(-1)';
+                } else {
+                    player.style.transform = 'scaleX(1)';
+                }
+            }
+
+            function updatePlayerSize() {
+                player.style.width = `${gameState.playerSize}px`;
+                player.style.height = `${gameState.playerSize * 0.6}px`; // Height is 60% of width
+            }
+
+            function updateScoreDisplay() {
+                scoreDisplay.textContent = `Skor: ${gameState.score}`;
+            }
+
+            function updateLevelDisplay() {
+                levelDisplay.textContent = `Level: ${gameState.level}`;
+            }
+
+            function updateLivesDisplay() {
+                livesDisplay.textContent = '♥'.repeat(gameState.lives);
+            }
+
+            function movePlayer() {
+                const containerRect = gameContainer.getBoundingClientRect();
+                const speed = config.playerMoveSpeed * (1 - (gameState.playerSize - config.playerMinSize) / 
+                    (config.playerMaxSize - config.playerMinSize) * 0.5);
+                
+                // Movement based on keys pressed
+                if (gameState.keysPressed['ArrowLeft'] || gameState.keysPressed['a']) {
+                    gameState.playerX = Math.max(0, gameState.playerX - speed);
+                    gameState.playerDirection = -1;
+                }
+                if (gameState.keysPressed['ArrowRight'] || gameState.keysPressed['d']) {
+                    gameState.playerX = Math.min(containerRect.width - gameState.playerSize, 
+                        gameState.playerX + speed);
+                    gameState.playerDirection = 1;
+                }
+                if (gameState.keysPressed['ArrowUp'] || gameState.keysPressed['w']) {
+                    gameState.playerY = Math.max(0, gameState.playerY - speed);
+                }
+                if (gameState.keysPressed['ArrowDown'] || gameState.keysPressed['s']) {
+                    gameState.playerY = Math.min(containerRect.height - gameState.playerSize, 
+                        gameState.playerY + speed);
+                }
+                
+                updatePlayerPosition();
+            }
+
+            function endGame() {
+                gameState.isGameRunning = false;
+                clearInterval(gameState.spawnInterval);
+                
+                // Update final score
+                finalScore.textContent = gameState.score;
+                finalLevel.textContent = gameState.level;
+                
+                // Show game over screen
+                gameOverScreen.style.display = 'block';
+            }
+
+            function gameLoop() {
+                if (!gameState.isGameRunning) return;
+                
+                movePlayer();
+                moveBubbles();
+                checkCollisions();
+                
+                gameState.animationId = requestAnimationFrame(gameLoop);
+            }
+
+            // Event listeners
+            startButton.addEventListener('click', () => {
+                gameState.difficulty = difficultySelect.value;
+                startScreen.style.display = 'none';
+                initGame();
+            });
+
+            restartButton.addEventListener('click', () => {
+                gameOverScreen.style.display = 'none';
+                initGame();
+            });
+
+            window.addEventListener('keydown', (e) => {
+                gameState.keysPressed[e.key] = true;
+                
+                // Prevent scrolling with arrow keys
+                if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key)) {
+                    e.preventDefault();
+                }
+            });
+
+            window.addEventListener('keyup', (e) => {
+                gameState.keysPressed[e.key] = false;
+            });
+
+            // Touch controls
+            if (gameState.isTouchDevice) {
+                // Touch for mobile direction buttons
+                btnLeft.addEventListener('touchstart', () => { gameState.keysPressed['ArrowLeft'] = true; });
+                btnLeft.addEventListener('touchend', () => { gameState.keysPressed['ArrowLeft'] = false; });
+                
+                btnRight.addEventListener('touchstart', () => { gameState.keysPressed['ArrowRight'] = true; });
+                btnRight.addEventListener('touchend', () => { gameState.keysPressed['ArrowRight'] = false; });
+                
+                btnUp.addEventListener('touchstart', () => { gameState.keysPressed['ArrowUp'] = true; });
+                btnUp.addEventListener('touchend', () => { gameState.keysPressed['ArrowUp'] = false; });
+                
+                btnDown.addEventListener('touchstart', () => { gameState.keysPressed['ArrowDown'] = true; });
+                btnDown.addEventListener('touchend', () => { gameState.keysPressed['ArrowDown'] = false; });
+                
+                // Mouse for desktop testing
+                btnLeft.addEventListener('mousedown', () => { gameState.keysPressed['ArrowLeft'] = true; });
+                btnLeft.addEventListener('mouseup', () => { gameState.keysPressed['ArrowLeft'] = false; });
+                btnLeft.addEventListener('mouseleave', () => { gameState.keysPressed['ArrowLeft'] = false; });
+                
+                btnRight.addEventListener('mousedown', () => { gameState.keysPressed['ArrowRight'] = true; });
+                btnRight.addEventListener('mouseup', () => { gameState.keysPressed['ArrowRight'] = false; });
+                btnRight.addEventListener('mouseleave', () => { gameState.keysPressed['ArrowRight'] = false; });
+                
+                btnUp.addEventListener('mousedown', () => { gameState.keysPressed['ArrowUp'] = true; });
+                btnUp.addEventListener('mouseup', () => { gameState.keysPressed['ArrowUp'] = false; });
+                btnUp.addEventListener('mouseleave', () => { gameState.keysPressed['ArrowUp'] = false; });
+                
+                btnDown.addEventListener('mousedown', () => { gameState.keysPressed['ArrowDown'] = true; });
+                btnDown.addEventListener('mouseup', () => { gameState.keysPressed['ArrowDown'] = false; });
+                btnDown.addEventListener('mouseleave', () => { gameState.keysPressed['ArrowDown'] = false; });
+                
+                // Direct fish movement with touch - improved mobile compatibility
+                gameContainer.addEventListener('touchstart', (e) => {
+                    if (!gameState.isGameRunning || startScreen.style.display !== 'none' || gameOverScreen.style.display !== 'none') return;
+                    
+                    const touch = e.touches[0];
+                    const containerRect = gameContainer.getBoundingClientRect();
+                    
+                    // Get touch position relative to game container
+                    const touchX = touch.clientX - containerRect.left;
+                    const touchY = touch.clientY - containerRect.top;
+                    
+                    // Set fish to follow touch position (center fish on touch point)
+                    gameState.playerX = touchX - (gameState.playerSize / 2);
+                    gameState.playerY = touchY - (gameState.playerSize / 2);
+                    
+                    // Keep fish within bounds
+                    gameState.playerX = Math.max(0, Math.min(containerRect.width - gameState.playerSize, gameState.playerX));
+                    gameState.playerY = Math.max(0, Math.min(containerRect.height - gameState.playerSize, gameState.playerY));
+                    
+                    updatePlayerPosition();
+                    
+                    // Store starting position for movement calculation
+                    gameState.lastTouchX = touchX;
+                    gameState.lastTouchY = touchY;
+                    
+                    e.preventDefault();
+                }, { passive: false });
+                
+                gameContainer.addEventListener('touchmove', (e) => {
+                    if (!gameState.isGameRunning || startScreen.style.display !== 'none' || gameOverScreen.style.display !== 'none') return;
+                    
+                    const touch = e.touches[0];
+                    const containerRect = gameContainer.getBoundingClientRect();
+                    
+                    // Get touch position relative to game container
+                    const touchX = touch.clientX - containerRect.left;
+                    const touchY = touch.clientY - containerRect.top;
+                    
+                    // Update fish position (center fish on touch point)
+                    gameState.playerX = touchX - (gameState.playerSize / 2);
+                    gameState.playerY = touchY - (gameState.playerSize / 2);
+                    
+                    // Keep fish within bounds
+                    gameState.playerX = Math.max(0, Math.min(containerRect.width - gameState.playerSize, gameState.playerX));
+                    gameState.playerY = Math.max(0, Math.min(containerRect.height - gameState.playerSize, gameState.playerY));
+                    
+                    // Update direction based on movement
+                    if (touchX !== gameState.lastTouchX) {
+                        gameState.playerDirection = touchX > gameState.lastTouchX ? 1 : -1;
+                    }
+                    
+                    updatePlayerPosition();
+                    
+                    // Update last touch position
+                    gameState.lastTouchX = touchX;
+                    gameState.lastTouchY = touchY;
+                    
+                    e.preventDefault();
+                }, { passive: false });
+                
+                // Also handle mouse drag on desktop for testing
+                let isMouseDown = false;
+                
+                gameContainer.addEventListener('mousedown', (e) => {
+                    if (!gameState.isGameRunning || startScreen.style.display !== 'none' || gameOverScreen.style.display !== 'none') return;
+                    
+                    isMouseDown = true;
+                    const containerRect = gameContainer.getBoundingClientRect();
+                    
+                    // Get mouse position relative to game container
+                    const mouseX = e.clientX - containerRect.left;
+                    const mouseY = e.clientY - containerRect.top;
+                    
+                    // Set fish to follow mouse position (center fish on mouse point)
+                    gameState.playerX = mouseX - (gameState.playerSize / 2);
+                    gameState.playerY = mouseY - (gameState.playerSize / 2);
+                    
+                    // Keep fish within bounds
+                    gameState.playerX = Math.max(0, Math.min(containerRect.width - gameState.playerSize, gameState.playerX));
+                    gameState.playerY = Math.max(0, Math.min(containerRect.height - gameState.playerSize, gameState.playerY));
+                    
+                    // Update direction based on movement
+                    if (mouseX !== gameState.lastTouchX) {
+                        gameState.playerDirection = mouseX > gameState.lastTouchX ? 1 : -1;
+                    }
+                    
+                    updatePlayerPosition();
+                    
+                    // Store starting position for movement calculation
+                    gameState.lastTouchX = mouseX;
+                    gameState.lastTouchY = mouseY;
+                });
+                
+                gameContainer.addEventListener('mousemove', (e) => {
+                    if (!isMouseDown || !gameState.isGameRunning || startScreen.style.display !== 'none' || gameOverScreen.style.display !== 'none') return;
+                    
+                    const containerRect = gameContainer.getBoundingClientRect();
+                    
+                    // Get mouse position relative to game container
+                    const mouseX = e.clientX - containerRect.left;
+                    const mouseY = e.clientY - containerRect.top;
+                    
+                    // Update fish position (center fish on mouse point)
+                    gameState.playerX = mouseX - (gameState.playerSize / 2);
+                    gameState.playerY = mouseY - (gameState.playerSize / 2);
+                    
+                    // Keep fish within bounds
+                    gameState.playerX = Math.max(0, Math.min(containerRect.width - gameState.playerSize, gameState.playerX));
+                    gameState.playerY = Math.max(0, Math.min(containerRect.height - gameState.playerSize, gameState.playerY));
+                    
+                    // Update direction based on movement
+                    if (mouseX !== gameState.lastTouchX) {
+                        gameState.playerDirection = mouseX > gameState.lastTouchX ? 1 : -1;
+                    }
+                    
+                    updatePlayerPosition();
+                    
+                    // Update last mouse position
+                    gameState.lastTouchX = mouseX;
+                    gameState.lastTouchY = mouseY;
+                });
+                
+                document.addEventListener('mouseup', () => {
+                    isMouseDown = false;
+                });
+            }
+
+            // Handle window resize
+            window.addEventListener('resize', () => {
+                if (gameState.isGameRunning) {
+                    resetPlayerPosition();
+                    createSeaweed();
+                }
+            });
+
+            // Create water bubbles
+            createWaterBubbles();
+        });
+    </script>
+
+
+</body></html>
