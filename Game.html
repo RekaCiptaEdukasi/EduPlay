@@ -1,0 +1,1331 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Penangkap Bentuk Ajaib</title>
+    <style>
+        :root {
+            --primary: #5D5CDE;
+            --background-light: #FFFFFF;
+            --text-light: #333333;
+            --background-dark: #181818;
+            --text-dark: #F0F0F0;
+            --correct: #4CAF50;
+            --wrong: #F44336;
+            --neutral: #FFC107;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--background-light);
+            color: var(--text-light);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            body {
+                background-color: var(--background-dark);
+                color: var(--text-dark);
+            }
+        }
+
+        header {
+            background-color: var(--primary);
+            color: white;
+            padding: 1rem;
+            text-align: center;
+            position: relative;
+        }
+
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 1rem;
+            align-items: center;
+            max-width: 100%;
+        }
+
+        #game-container {
+            width: 100%;
+            max-width: 500px;
+            position: relative;
+            margin-top: 1rem;
+            background-color: rgba(93, 92, 222, 0.1);
+            border-radius: 1rem;
+            overflow: hidden;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        #game-area {
+            height: 400px;
+            position: relative;
+            overflow: hidden;
+            border-radius: 0.5rem;
+            /* Gradient background for better depth perception */
+            background: linear-gradient(to bottom, #e6f7ff, #f5f5f5);
+        }
+
+        @media (prefers-color-scheme: dark) {
+            #game-area {
+                background: linear-gradient(to bottom, #1a2a33, #121212);
+            }
+        }
+
+        #tutorial-screen, #start-screen, #game-over-screen, #settings-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background-color: rgba(255, 255, 255, 0.95);
+            z-index: 50;
+            padding: 1.5rem;
+            text-align: center;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            #tutorial-screen, #start-screen, #game-over-screen, #settings-screen {
+                background-color: rgba(24, 24, 24, 0.95);
+            }
+        }
+
+        #tutorial-screen h2, #start-screen h2, #game-over-screen h2, #settings-screen h2 {
+            font-size: 1.8rem;
+            margin-bottom: 1rem;
+            color: var(--primary);
+        }
+
+        #tutorial-screen p, #start-screen p, #settings-screen p {
+            margin-bottom: 1rem;
+            font-size: 1rem;
+            line-height: 1.5;
+        }
+
+        .shape {
+            position: absolute;
+            width: 70px;  /* Made bigger */
+            height: 70px; /* Made bigger */
+            background-size: contain;
+            background-position: center;
+            background-repeat: no-repeat;
+            animation: float 1s infinite alternate ease-in-out;
+            z-index: 10;
+            /* 3D effect with shadow and transform */
+            filter: drop-shadow(3px 5px 2px rgba(0, 0, 0, 0.4));
+        }
+
+        @keyframes float {
+            from { transform: translateY(0) rotate(0deg) scale(1); }
+            to { transform: translateY(5px) rotate(3deg) scale(1.05); }
+        }
+
+        /* 3D shape effects */
+        .shape-kubus { transform-style: preserve-3d; perspective: 500px; transform: rotateX(10deg) rotateY(20deg); }
+        .shape-balok { transform-style: preserve-3d; perspective: 500px; transform: rotateX(5deg) rotateY(15deg); }
+        .shape-tabung { transform-style: preserve-3d; perspective: 500px; transform: rotateX(10deg) rotateY(0deg); }
+        .shape-kerucut { transform-style: preserve-3d; perspective: 500px; transform: rotateX(-5deg) rotateY(15deg); }
+        .shape-bola { transform-style: preserve-3d; perspective: 500px; animation: spin 6s infinite linear; }
+        .shape-limas { transform-style: preserve-3d; perspective: 500px; transform: rotateX(15deg) rotateY(25deg); }
+        .shape-prisma { transform-style: preserve-3d; perspective: 500px; transform: rotateX(10deg) rotateY(30deg); }
+
+        @keyframes spin {
+            from { transform: rotateY(0deg); }
+            to { transform: rotateY(360deg); }
+        }
+
+        #player {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100px; /* Made wider */
+            height: 80px;
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%235D5CDE"><path d="M19,8.89V5a3,3,0,0,0-3-3H8A3,3,0,0,0,5,5V8.89a3,3,0,0,0-1.5,5.59V20a1,1,0,0,0,1,1H19.5a1,1,0,0,0,1-1V14.48A3,3,0,0,0,19,8.89ZM17,15v4H7V15Zm0-8.31V13H7V6.69ZM8,4h8a1,1,0,0,1,1,1V5H7V5A1,1,0,0,1,8,4Z"/></svg>');
+            background-size: contain;
+            background-position: center;
+            background-repeat: no-repeat;
+            z-index: 20;
+            transition: left 0.1s ease-out;
+        }
+
+        #hud {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.75rem;
+            background-color: var(--primary);
+            color: white;
+            border-radius: 0 0 0.5rem 0.5rem;
+        }
+
+        #score, #level, #target, #time {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        #target-shape {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-top: 0.25rem;
+        }
+
+        #target-shape img {
+            width: 30px;
+            height: 30px;
+            margin-left: 0.5rem;
+        }
+
+        #target-text {
+            font-weight: bold;
+        }
+
+        .info-label {
+            font-size: 0.75rem;
+            opacity: 0.8;
+        }
+
+        .info-value {
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+
+        button {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            font-size: 1rem;
+            border-radius: 2rem;
+            cursor: pointer;
+            margin-top: 1rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+            font-weight: bold;
+            touch-action: manipulation;
+            position: relative;
+            z-index: 100; /* Ensure buttons are above other elements */
+        }
+
+        button:hover, button:focus {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        button:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            width: 100%;
+            max-width: 500px;
+            margin-top: 1rem;
+        }
+
+        .control-btn {
+            width: 60px;
+            height: 60px;
+            background-color: var(--primary);
+            border: none;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            opacity: 0.8;
+            transition: opacity 0.2s, transform 0.2s;
+            touch-action: manipulation;
+        }
+
+        .control-btn:hover, .control-btn:focus {
+            opacity: 1;
+            transform: scale(1.1);
+        }
+
+        .control-btn:active {
+            transform: scale(0.95);
+        }
+
+        #final-score {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: var(--primary);
+            margin: 1rem 0;
+        }
+
+        #shape-gallery {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 0.5rem;
+            margin: 1rem 0;
+        }
+
+        .gallery-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 70px;
+        }
+
+        .gallery-item img {
+            width: 50px;
+            height: 50px;
+            filter: drop-shadow(2px 3px 1px rgba(0, 0, 0, 0.3));
+        }
+
+        .gallery-item span {
+            font-size: 0.75rem;
+            text-align: center;
+            margin-top: 0.25rem;
+        }
+
+        #message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 2rem;
+            font-weight: bold;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+            z-index: 30;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 500px) {
+            h1 {
+                font-size: 1.5rem;
+            }
+            
+            #game-area {
+                height: 350px;
+            }
+            
+            .controls {
+                gap: 0.5rem;
+            }
+            
+            .control-btn {
+                width: 50px;
+                height: 50px;
+            }
+        }
+        
+        /* Highlight back button for better visibility */
+        .back-btn {
+            background-color: #4e4ac5;
+            font-weight: bold;
+            box-shadow: 0 0 10px rgba(93, 92, 222, 0.5);
+            margin-top: 1.5rem;
+            font-size: 1.1rem;
+            padding: 0.8rem 2rem;
+        }
+        
+        /* Debug panel */
+        #debug-panel {
+            position: absolute;
+            bottom: 5px;
+            left: 5px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 5px;
+            border-radius: 5px;
+            font-size: 10px;
+            z-index: 100;
+            display: none;
+        }
+
+        /* Settings styles */
+        .settings-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 1rem 0;
+            width: 100%;
+            max-width: 300px;
+        }
+
+        .settings-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            margin-bottom: 0.5rem;
+        }
+
+        .settings-label {
+            font-weight: bold;
+            margin-right: 1rem;
+        }
+
+        .settings-input {
+            width: 100px;
+            padding: 0.5rem;
+            border: 2px solid var(--primary);
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            text-align: center;
+        }
+
+        /* Time buttons */
+        .time-buttons {
+            display: flex;
+            gap: 0.5rem;
+            margin: 0.5rem 0;
+        }
+
+        .time-btn {
+            padding: 0.5rem 1rem;
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+        }
+
+        .button-row {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .top-right-button {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            padding: 0.5rem;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: var(--primary);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            font-size: 1.2rem;
+            color: white;
+            font-weight: bold;
+            z-index: 55;
+        }
+
+        .top-left-button {
+            position: absolute;
+            top: 1rem;
+            left: 1rem;
+            padding: 0.5rem;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: var(--primary);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            font-size: 1.2rem;
+            color: white;
+            font-weight: bold;
+            z-index: 55;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Penangkap Bentuk Ajaib</h1>
+        <p>Tangkap bangun ruang sesuai bentuk yang diminta!</p>
+    </header>
+    
+    <main>
+        <div id="game-container">
+            <div id="game-area">
+                <div id="player"></div>
+                <div id="message"></div>
+                <div id="debug-panel"></div>
+                
+                <!-- Start screen -->
+                <div id="start-screen">
+                    <button class="top-left-button" id="back-to-menu-btn">↩</button>
+                    <button class="top-right-button" id="settings-btn">⚙</button>
+                    
+                    <h2>Penangkap Bentuk Ajaib</h2>
+                    <p>Tangkap bangun ruang sesuai bentuk yang diminta untuk mendapatkan poin!</p>
+                    <p>Hindari bentuk yang salah!</p>
+                    
+                    <button id="tutorial-btn">Cara Bermain</button>
+                    <button id="start-btn">Mulai Bermain</button>
+                </div>
+                
+                <!-- Tutorial screen -->
+                <div id="tutorial-screen" style="display: none;">
+                    <button class="top-left-button" id="tutorial-back-btn">↩</button>
+                    
+                    <h2>Cara Bermain</h2>
+                    <p>1. Ikuti petunjuk bentuk bangun ruang yang diminta</p>
+                    <p>2. Gerakkan keranjang ke kiri dan kanan untuk menangkap bentuk yang tepat</p>
+                    <p>3. Setiap bentuk yang benar memberikan 10 poin</p>
+                    <p>4. Setiap kesalahan mengurangi waktu</p>
+                    <p>5. Tangkap sebanyak mungkin bentuk sebelum waktu habis!</p>
+                    <div id="shape-gallery">
+                        <div class="gallery-item">
+                            <img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%235D5CDE'><path d='M19,8.89V5a3,3,0,0,0-3-3H8A3,3,0,0,0,5,5V8.89a3,3,0,0,0-1.5,5.59V20a1,1,0,0,0,1,1H19.5a1,1,0,0,0,1-1V14.48A3,3,0,0,0,19,8.89ZM17,15v4H7V15Zm0-8.31V13H7V6.69ZM8,4h8a1,1,0,0,1,1,1V5H7V5A1,1,0,0,1,8,4Z'/></svg>" alt="Kubus">
+                            <span>Kubus</span>
+                        </div>
+                        <div class="gallery-item">
+                            <img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%235D5CDE'><path d='M20.12,9.22A2.68,2.68,0,0,0,21,7a3,3,0,0,0-3-3H6A3,3,0,0,0,3,7a2.68,2.68,0,0,0,.88,2.22A3,3,0,0,0,3,12a3,3,0,0,0,1.5,2.59A3,3,0,0,0,3,17a3,3,0,0,0,3,3H18a3,3,0,0,0,3-3,3,3,0,0,0-1.5-2.59A3,3,0,0,0,21,12,3,3,0,0,0,20.12,9.22ZM18,18H6a1,1,0,0,1,0-2H18a1,1,0,0,1,0,2Zm0-5H6a1,1,0,0,1,0-2H18a1,1,0,0,1,0,2ZM6,6H18a1,1,0,0,1,0,2H6A1,1,0,0,1,6,6Z'/></svg>" alt="Balok">
+                            <span>Balok</span>
+                        </div>
+                        <div class="gallery-item">
+                            <img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%235D5CDE'><path d='M12,1C8.14,1,5,1.56,5,5V19c0,3.44,3.14,4,7,4s7-.56,7-4V5C19,1.56,15.86,1,12,1Zm5,18c0,1.91-2.25,2-5,2s-5-.09-5-2V13.37c1.2.66,3.32,1,5,1s3.8-.34,5-1Zm0-8.37c-1.2.66-3.32,1-5,1s-3.8-.34-5-1V5c0-1.91,2.25-2,5-2s5,.09,5,2Z'/></svg>" alt="Tabung">
+                            <span>Tabung</span>
+                        </div>
+                        <div class="gallery-item">
+                            <img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%235D5CDE'><path d='M12,1a1,1,0,0,0-.71.3L6.63,5.94A1,1,0,0,0,6.33,7L10.93,20.9a1,1,0,0,0,1,.72.93.93,0,0,0,.35-.07,1,1,0,0,0,.54-.54l4.61-14a1,1,0,0,0-.3-1.08L12.7,1.32A1,1,0,0,0,12,1Zm-.75,4.36,3.17,2.94L11.17,18.07,7.31,7Z'/></svg>" alt="Kerucut">
+                            <span>Kerucut</span>
+                        </div>
+                        <div class="gallery-item">
+                            <img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%235D5CDE'><circle cx='12' cy='12' r='10'/></svg>" alt="Bola">
+                            <span>Bola</span>
+                        </div>
+                        <div class="gallery-item">
+                            <img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%235D5CDE'><path d='M21.87,11.5,12.07,2.1a.41.41,0,0,0-.1-.08l-.18-.09-.18,0H12l-.18,0-.18.09-.1.08L2.13,11.5A.5.5,0,0,0,2,11.84V21a1,1,0,0,0,1,1H21a1,1,0,0,0,1-1V11.84A.5.5,0,0,0,21.87,11.5ZM20,20H4V12.21l8-7.78,8,7.78Z'/></svg>" alt="Limas">
+                            <span>Limas</span>
+                        </div>
+                        <div class="gallery-item">
+                            <img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%235D5CDE'><path d='M21,2H3A1,1,0,0,0,2,3V8a1,1,0,0,0,.4.8l8,6a1,1,0,0,0,1.2,0l8-6A1,1,0,0,0,20,8V3A1,1,0,0,0,19,2ZM4,3H20v4.75l-7,5.25L6,7.75V3Z'/><path d='M21.4,15.2l-8-6a1,1,0,0,0-1.2,0l-8,6A1,1,0,0,0,4,16v5a1,1,0,0,0,1,1H19a1,1,0,0,0,1-1V16A1,1,0,0,0,21.4,15.2ZM18,20H6V16.75l6,4.5,6-4.5Z'/></svg>" alt="Prisma">
+                            <span>Prisma</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Game over screen -->
+                <div id="game-over-screen" style="display: none;">
+                    <button class="top-left-button" id="gameover-back-btn">↩</button>
+                    
+                    <h2>Permainan Selesai</h2>
+                    <p>Skor Akhir:</p>
+                    <div id="final-score">0</div>
+                    <button id="restart-btn">Main Lagi</button>
+                </div>
+                
+                <!-- Settings screen -->
+                <div id="settings-screen" style="display: none;">
+                    <button class="top-left-button" id="settings-back-btn">↩</button>
+                    
+                    <h2>Pengaturan</h2>
+                    
+                    <div class="settings-group">
+                        <div class="settings-row">
+                            <span class="settings-label">Durasi Waktu:</span>
+                            <input type="number" id="time-setting" class="settings-input" min="10" max="300" value="30">
+                        </div>
+                        
+                        <div class="time-buttons">
+                            <button class="time-btn" data-time="30">30 dtk</button>
+                            <button class="time-btn" data-time="60">1 mnt</button>
+                            <button class="time-btn" data-time="120">2 mnt</button>
+                            <button class="time-btn" data-time="180">3 mnt</button>
+                        </div>
+                    </div>
+                    
+                    <button id="save-settings-btn">Simpan Pengaturan</button>
+                </div>
+            </div>
+            
+            <div id="hud">
+                <div id="score">
+                    <span class="info-label">Skor</span>
+                    <span class="info-value" id="score-value">0</span>
+                </div>
+                <div id="target">
+                    <span class="info-label">Tangkap</span>
+                    <div id="target-shape">
+                        <span id="target-text">Kubus</span>
+                        <img id="target-img" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'><path d='M19,8.89V5a3,3,0,0,0-3-3H8A3,3,0,0,0,5,5V8.89a3,3,0,0,0-1.5,5.59V20a1,1,0,0,0,1,1H19.5a1,1,0,0,0,1-1V14.48A3,3,0,0,0,19,8.89ZM17,15v4H7V15Zm0-8.31V13H7V6.69ZM8,4h8a1,1,0,0,1,1,1V5H7V5A1,1,0,0,1,8,4Z'/></svg>" alt="Kubus">
+                    </div>
+                </div>
+                <div id="level">
+                    <span class="info-label">Level</span>
+                    <span class="info-value" id="level-value">1</span>
+                </div>
+                <div id="time">
+                    <span class="info-label">Waktu</span>
+                    <span class="info-value" id="time-value">30</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <button class="control-btn" id="left-btn">⬅️</button>
+            <button class="control-btn" id="right-btn">➡️</button>
+        </div>
+    </main>
+
+    <script>
+        // Game elements
+        let player, gameArea, scoreValue, levelValue, timeValue, targetText, targetImg;
+        let startScreen, tutorialScreen, gameOverScreen, settingsScreen;
+        let startBtn, tutorialBtn, restartBtn, finalScore, leftBtn, rightBtn, message;
+        let backToMenuBtn, tutorialBackBtn, gameoverBackBtn, settingsBtn, settingsBackBtn, saveSettingsBtn;
+        let timeSetting, timeButtons;
+        let debugPanel;
+
+        // Enhanced 3D-looking shape icons
+        const enhancedShapeIcons = {
+            'Kubus': `
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="100%">
+                    <defs>
+                        <linearGradient id="kubus-grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="#7d7bf7" />
+                            <stop offset="100%" stop-color="#5D5CDE" />
+                        </linearGradient>
+                        <linearGradient id="kubus-grad2" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="#5D5CDE" />
+                            <stop offset="100%" stop-color="#4342b9" />
+                        </linearGradient>
+                    </defs>
+                    <rect x="20" y="20" width="60" height="60" rx="3" fill="url(#kubus-grad1)" />
+                    <polygon points="20,20 30,10 90,10 80,20" fill="url(#kubus-grad2)" />
+                    <polygon points="80,20 90,10 90,70 80,80" fill="url(#kubus-grad2)" />
+                    <rect x="23" y="23" width="54" height="54" rx="2" fill="none" stroke="#ffffff" stroke-width="1" stroke-opacity="0.3" />
+                </svg>
+            `,
+            'Balok': `
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="100%">
+                    <defs>
+                        <linearGradient id="balok-grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="#7d7bf7" />
+                            <stop offset="100%" stop-color="#5D5CDE" />
+                        </linearGradient>
+                        <linearGradient id="balok-grad2" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="#5D5CDE" />
+                            <stop offset="100%" stop-color="#4342b9" />
+                        </linearGradient>
+                    </defs>
+                    <rect x="15" y="30" width="70" height="40" rx="3" fill="url(#balok-grad1)" />
+                    <polygon points="15,30 25,20 95,20 85,30" fill="url(#balok-grad2)" />
+                    <polygon points="85,30 95,20 95,60 85,70" fill="url(#balok-grad2)" />
+                    <rect x="18" y="33" width="64" height="34" rx="2" fill="none" stroke="#ffffff" stroke-width="1" stroke-opacity="0.3" />
+                </svg>
+            `,
+            'Tabung': `
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="100%">
+                    <defs>
+                        <linearGradient id="tabung-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="#7d7bf7" />
+                            <stop offset="100%" stop-color="#5D5CDE" />
+                        </linearGradient>
+                    </defs>
+                    <ellipse cx="50" cy="25" rx="30" ry="10" fill="#4342b9" />
+                    <rect x="20" y="25" width="60" height="50" fill="url(#tabung-grad)" />
+                    <ellipse cx="50" cy="75" rx="30" ry="10" fill="#7d7bf7" />
+                    <ellipse cx="50" cy="25" rx="30" ry="10" fill="none" stroke="#ffffff" stroke-width="1" stroke-opacity="0.5" />
+                </svg>
+            `,
+            'Kerucut': `
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="100%">
+                    <defs>
+                        <linearGradient id="kerucut-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="#7d7bf7" />
+                            <stop offset="100%" stop-color="#5D5CDE" />
+                        </linearGradient>
+                    </defs>
+                    <ellipse cx="50" cy="80" rx="30" ry="10" fill="#4342b9" />
+                    <path d="M50,10 L80,80 A30,10 0 1,1 20,80 Z" fill="url(#kerucut-grad)" />
+                    <ellipse cx="50" cy="80" rx="30" ry="10" fill="none" stroke="#ffffff" stroke-width="1" stroke-opacity="0.3" />
+                </svg>
+            `,
+            'Bola': `
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="100%">
+                    <defs>
+                        <radialGradient id="bola-grad" cx="40%" cy="40%" r="60%" fx="30%" fy="30%">
+                            <stop offset="0%" stop-color="#7d7bf7" />
+                            <stop offset="80%" stop-color="#5D5CDE" />
+                            <stop offset="100%" stop-color="#4342b9" />
+                        </radialGradient>
+                    </defs>
+                    <circle cx="50" cy="50" r="40" fill="url(#bola-grad)" />
+                    <ellipse cx="35" cy="35" rx="15" ry="12" fill="white" opacity="0.2" />
+                </svg>
+            `,
+            'Limas': `
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="100%">
+                    <defs>
+                        <linearGradient id="limas-grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="#7d7bf7" />
+                            <stop offset="100%" stop-color="#5D5CDE" />
+                        </linearGradient>
+                        <linearGradient id="limas-grad2" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="#5D5CDE" />
+                            <stop offset="100%" stop-color="#4342b9" />
+                        </linearGradient>
+                    </defs>
+                    <polygon points="20,80 80,80 80,50 20,50" fill="url(#limas-grad1)" />
+                    <polygon points="20,80 50,20 80,80" fill="url(#limas-grad2)" />
+                    <polygon points="20,50 50,20 80,50" fill="#4342b9" />
+                    <polyline points="20,80 20,50 80,50 80,80" fill="none" stroke="white" stroke-width="1" opacity="0.3" />
+                </svg>
+            `,
+            'Prisma': `
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="100%">
+                    <defs>
+                        <linearGradient id="prisma-grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="#7d7bf7" />
+                            <stop offset="100%" stop-color="#5D5CDE" />
+                        </linearGradient>
+                        <linearGradient id="prisma-grad2" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="#5D5CDE" />
+                            <stop offset="100%" stop-color="#4342b9" />
+                        </linearGradient>
+                    </defs>
+                    <polygon points="30,30 70,30 90,50 50,50 10,50" fill="url(#prisma-grad2)" />
+                    <polygon points="30,70 70,70 90,50 50,50 10,50" fill="url(#prisma-grad1)" />
+                    <polygon points="30,30 30,70 10,50" fill="#6e6deb" />
+                    <polygon points="70,30 70,70 90,50" fill="#4342b9" />
+                    <polyline points="30,30 70,30 70,70 30,70 30,30" fill="none" stroke="white" stroke-width="1" opacity="0.3" />
+                </svg>
+            `
+        };
+
+        // Game configuration
+        const gameConfig = {
+            playerSpeed: 15,
+            shapeSpeed: 1.5, // Reduced from 2 to make shapes fall slower
+            shapeFallInterval: 1500, 
+            shapeTypes: [
+                {
+                    name: 'Kubus',
+                    icon: enhancedShapeIcons['Kubus'],
+                    class: 'shape-kubus'
+                },
+                {
+                    name: 'Balok',
+                    icon: enhancedShapeIcons['Balok'],
+                    class: 'shape-balok'
+                },
+                {
+                    name: 'Tabung',
+                    icon: enhancedShapeIcons['Tabung'],
+                    class: 'shape-tabung'
+                },
+                {
+                    name: 'Kerucut',
+                    icon: enhancedShapeIcons['Kerucut'],
+                    class: 'shape-kerucut'
+                },
+                {
+                    name: 'Bola',
+                    icon: enhancedShapeIcons['Bola'],
+                    class: 'shape-bola'
+                },
+                {
+                    name: 'Limas',
+                    icon: enhancedShapeIcons['Limas'],
+                    class: 'shape-limas'
+                },
+                {
+                    name: 'Prisma',
+                    icon: enhancedShapeIcons['Prisma'],
+                    class: 'shape-prisma'
+                }
+            ],
+            baseTime: 30,
+            timePerLevel: 5,
+            pointsPerCorrectCatch: 10,
+            timePenalty: 2,
+            scoreToNextLevel: 50,
+            debugMode: false // Set to true to show debug panel
+        };
+
+        // Game state
+        let gameState = {
+            isPlaying: false,
+            score: 0,
+            level: 1,
+            time: gameConfig.baseTime,
+            interval: null,
+            targetShape: null,
+            shapes: [],
+            keys: {
+                left: false,
+                right: false
+            },
+            playerPosition: 0,
+            touchStartX: 0,
+            // Track shape creation stats for debugging
+            shapeStats: {
+                total: 0,
+                types: {}
+            },
+            // Settings
+            settings: {
+                gameTime: 30 // Default game time in seconds
+            }
+        };
+
+        // Make sure DOM is loaded before accessing elements
+        document.addEventListener('DOMContentLoaded', initializeGame);
+
+        function initializeGame() {
+            // Get all elements
+            player = document.getElementById('player');
+            gameArea = document.getElementById('game-area');
+            scoreValue = document.getElementById('score-value');
+            levelValue = document.getElementById('level-value');
+            timeValue = document.getElementById('time-value');
+            targetText = document.getElementById('target-text');
+            targetImg = document.getElementById('target-img');
+            startScreen = document.getElementById('start-screen');
+            tutorialScreen = document.getElementById('tutorial-screen');
+            gameOverScreen = document.getElementById('game-over-screen');
+            settingsScreen = document.getElementById('settings-screen');
+            
+            startBtn = document.getElementById('start-btn');
+            tutorialBtn = document.getElementById('tutorial-btn');
+            restartBtn = document.getElementById('restart-btn');
+            backToMenuBtn = document.getElementById('back-to-menu-btn');
+            tutorialBackBtn = document.getElementById('tutorial-back-btn');
+            gameoverBackBtn = document.getElementById('gameover-back-btn');
+            settingsBtn = document.getElementById('settings-btn');
+            settingsBackBtn = document.getElementById('settings-back-btn');
+            saveSettingsBtn = document.getElementById('save-settings-btn');
+            
+            finalScore = document.getElementById('final-score');
+            leftBtn = document.getElementById('left-btn');
+            rightBtn = document.getElementById('right-btn');
+            message = document.getElementById('message');
+            debugPanel = document.getElementById('debug-panel');
+            
+            timeSetting = document.getElementById('time-setting');
+            timeButtons = document.querySelectorAll('.time-btn');
+
+            // Initialize debug panel 
+            if (gameConfig.debugMode) {
+                debugPanel.style.display = 'block';
+                // Initialize shape counts in debug stats
+                gameConfig.shapeTypes.forEach(type => {
+                    gameState.shapeStats.types[type.name] = 0;
+                });
+            }
+
+            // Initialize settings
+            timeSetting.value = gameState.settings.gameTime;
+            
+            // Set up time preset buttons
+            timeButtons.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const timeValue = parseInt(this.dataset.time);
+                    timeSetting.value = timeValue;
+                });
+            });
+
+            // Set up button event listeners
+            tutorialBtn.addEventListener('click', function() {
+                startScreen.style.display = 'none';
+                tutorialScreen.style.display = 'flex';
+            });
+            
+            // Back button from tutorial
+            tutorialBackBtn.addEventListener('click', function() {
+                tutorialScreen.style.display = 'none';
+                startScreen.style.display = 'flex';
+            });
+            
+            // Back button from game over
+            gameoverBackBtn.addEventListener('click', function() {
+                gameOverScreen.style.display = 'none';
+                startScreen.style.display = 'flex';
+            });
+            
+            // Back button to "menu" (simulated by reloading the page)
+            backToMenuBtn.addEventListener('click', function() {
+                // In a real app, this would navigate back to a menu
+                // Here we'll just reload the page for simulation
+                if (confirm('Kembali ke menu utama?')) {
+                    window.location.reload();
+                }
+            });
+            
+            // Settings button
+            settingsBtn.addEventListener('click', function() {
+                startScreen.style.display = 'none';
+                settingsScreen.style.display = 'flex';
+            });
+            
+            // Back from settings
+            settingsBackBtn.addEventListener('click', function() {
+                settingsScreen.style.display = 'none';
+                startScreen.style.display = 'flex';
+            });
+            
+            // Save settings
+            saveSettingsBtn.addEventListener('click', function() {
+                const newTime = parseInt(timeSetting.value);
+                if (newTime >= 10 && newTime <= 300) {
+                    gameState.settings.gameTime = newTime;
+                    gameConfig.baseTime = newTime;
+                    timeValue.textContent = newTime;
+                    
+                    // Show save feedback
+                    showMessage('Tersimpan!', '#4CAF50');
+                    
+                    // Return to start screen
+                    setTimeout(() => {
+                        settingsScreen.style.display = 'none';
+                        startScreen.style.display = 'flex';
+                    }, 1000);
+                } else {
+                    alert('Durasi waktu harus antara 10-300 detik');
+                }
+            });
+            
+            startBtn.addEventListener('click', startGame);
+            restartBtn.addEventListener('click', startGame);
+
+            // Control buttons for mobile
+            leftBtn.addEventListener('mousedown', function() { gameState.keys.left = true; });
+            leftBtn.addEventListener('mouseup', function() { gameState.keys.left = false; });
+            leftBtn.addEventListener('touchstart', function(e) { 
+                e.preventDefault();
+                gameState.keys.left = true; 
+            });
+            leftBtn.addEventListener('touchend', function() { gameState.keys.left = false; });
+            
+            rightBtn.addEventListener('mousedown', function() { gameState.keys.right = true; });
+            rightBtn.addEventListener('mouseup', function() { gameState.keys.right = false; });
+            rightBtn.addEventListener('touchstart', function(e) { 
+                e.preventDefault();
+                gameState.keys.right = true; 
+            });
+            rightBtn.addEventListener('touchend', function() { gameState.keys.right = false; });
+
+            // Touch controls for player movement
+            gameArea.addEventListener('touchstart', function(e) {
+                if (gameState.isPlaying) {
+                    gameState.touchStartX = e.touches[0].clientX;
+                    e.preventDefault();
+                }
+            });
+            
+            gameArea.addEventListener('touchmove', function(e) {
+                if (gameState.isPlaying) {
+                    e.preventDefault();
+                    const touchX = e.touches[0].clientX;
+                    const diffX = touchX - gameState.touchStartX;
+                    
+                    gameState.playerPosition += diffX;
+                    updatePlayerPosition();
+                    
+                    gameState.touchStartX = touchX;
+                }
+            });
+
+            // Keyboard controls
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'ArrowLeft') {
+                    gameState.keys.left = true;
+                } else if (e.key === 'ArrowRight') {
+                    gameState.keys.right = true;
+                } else if (e.key === 'Escape') {
+                    // ESC key - go back to start screen if not playing
+                    if (!gameState.isPlaying) {
+                        tutorialScreen.style.display = 'none';
+                        gameOverScreen.style.display = 'none';
+                        settingsScreen.style.display = 'none';
+                        startScreen.style.display = 'flex';
+                    }
+                }
+            });
+            
+            document.addEventListener('keyup', function(e) {
+                if (e.key === 'ArrowLeft') {
+                    gameState.keys.left = false;
+                } else if (e.key === 'ArrowRight') {
+                    gameState.keys.right = false;
+                }
+            });
+
+            // Start game loop
+            gameLoop();
+        }
+
+        // Update debug panel
+        function updateDebugInfo() {
+            if (!gameConfig.debugMode) return;
+            
+            // Create a string of all shape counts
+            let shapeCounts = '';
+            for (const [shapeName, count] of Object.entries(gameState.shapeStats.types)) {
+                shapeCounts += `${shapeName}: ${count}<br>`;
+            }
+            
+            debugPanel.innerHTML = `
+                Total shapes: ${gameState.shapeStats.total}<br>
+                Active shapes: ${gameState.shapes.length}<br>
+                Game time: ${gameState.settings.gameTime}s<br>
+                ${shapeCounts}
+            `;
+        }
+
+        // Set player position
+        function updatePlayerPosition() {
+            const maxX = gameArea.offsetWidth - player.offsetWidth;
+            gameState.playerPosition = Math.max(0, Math.min(maxX, gameState.playerPosition));
+            player.style.left = gameState.playerPosition + 'px';
+        }
+
+        // Create a new falling shape with enhanced 3D look
+        function createShape() {
+            // Don't create shapes if game is not playing
+            if (!gameState.isPlaying) return;
+
+            // Select a random shape type
+            const shapeIndex = Math.floor(Math.random() * gameConfig.shapeTypes.length);
+            const shapeType = gameConfig.shapeTypes[shapeIndex];
+            
+            // Track shape creation for debugging
+            gameState.shapeStats.total++;
+            gameState.shapeStats.types[shapeType.name] = (gameState.shapeStats.types[shapeType.name] || 0) + 1;
+            updateDebugInfo();
+            
+            // Create the shape element
+            const shape = document.createElement('div');
+            shape.className = 'shape ' + shapeType.class;
+            shape.dataset.type = shapeType.name;
+            
+            // Add the SVG content directly to the div
+            shape.innerHTML = shapeType.icon;
+            
+            // Position shape at random horizontal position above the game area
+            const maxX = gameArea.offsetWidth - 70; // shape width
+            const randomX = Math.floor(Math.random() * maxX);
+            shape.style.left = randomX + 'px';
+            shape.style.top = '-70px'; // Start above the visible area
+            
+            // Add shape to game area and track it
+            gameArea.appendChild(shape);
+            gameState.shapes.push(shape);
+            
+            // Calculate fall speed based on level
+            const speedMultiplier = 0.7 + (0.1 * gameState.level); // Gradual increase
+            const speed = gameConfig.shapeSpeed * speedMultiplier;
+            
+            // Start falling animation
+            let currentTop = -70;
+            const fallInterval = setInterval(() => {
+                if (!gameState.isPlaying) {
+                    clearInterval(fallInterval);
+                    return;
+                }
+                
+                // Move shape down
+                currentTop += speed;
+                shape.style.top = currentTop + 'px';
+                
+                // Check if shape is out of bounds
+                if (currentTop > gameArea.offsetHeight) {
+                    clearInterval(fallInterval);
+                    if (shape.parentNode === gameArea) {
+                        gameArea.removeChild(shape);
+                    }
+                    gameState.shapes = gameState.shapes.filter(s => s !== shape);
+                    updateDebugInfo();
+                }
+                
+                // Check collision with player
+                checkCollision(shape);
+            }, 16); // 60fps-like update
+        }
+
+        // Create specific shape (for testing or forcing certain shapes)
+        function createSpecificShape(shapeName) {
+            const shapeType = gameConfig.shapeTypes.find(t => t.name === shapeName);
+            if (!shapeType) return;
+                
+            // Create the shape element
+            const shape = document.createElement('div');
+            shape.className = 'shape ' + shapeType.class;
+            shape.dataset.type = shapeType.name;
+            
+            // Add the SVG content directly to the div
+            shape.innerHTML = shapeType.icon;
+            
+            // Position shape at center of game area
+            const maxX = gameArea.offsetWidth - 70; // shape width
+            const centerX = maxX / 2;
+            shape.style.left = centerX + 'px';
+            shape.style.top = '-70px'; // Start above the visible area
+            
+            // Add shape to game area and track it
+            gameArea.appendChild(shape);
+            gameState.shapes.push(shape);
+            
+            // Calculate fall speed based on level
+            const speed = gameConfig.shapeSpeed * 0.7; // Slower for testing
+            
+            // Start falling animation
+            let currentTop = -70;
+            const fallInterval = setInterval(() => {
+                if (!gameState.isPlaying) {
+                    clearInterval(fallInterval);
+                    return;
+                }
+                
+                // Move shape down
+                currentTop += speed;
+                shape.style.top = currentTop + 'px';
+                
+                // Check if shape is out of bounds
+                if (currentTop > gameArea.offsetHeight) {
+                    clearInterval(fallInterval);
+                    if (shape.parentNode === gameArea) {
+                        gameArea.removeChild(shape);
+                    }
+                    gameState.shapes = gameState.shapes.filter(s => s !== shape);
+                }
+                
+                // Check collision with player
+                checkCollision(shape);
+            }, 16); // 60fps-like update
+        }
+
+        // Check collision between shape and player
+        function checkCollision(shape) {
+            if (!shape || !shape.getBoundingClientRect) return;
+            
+            const shapeRect = shape.getBoundingClientRect();
+            const playerRect = player.getBoundingClientRect();
+            
+            // Check if shape and player rectangles overlap
+            const collision = !(
+                shapeRect.right < playerRect.left || 
+                shapeRect.left > playerRect.right || 
+                shapeRect.bottom < playerRect.top || 
+                shapeRect.top > playerRect.bottom
+            );
+            
+            if (collision && gameState.shapes.includes(shape)) {
+                // Remove shape
+                if (shape.parentNode === gameArea) {
+                    gameArea.removeChild(shape);
+                }
+                gameState.shapes = gameState.shapes.filter(s => s !== shape);
+                updateDebugInfo();
+                
+                // Check if correct shape
+                if (shape.dataset.type === gameState.targetShape) {
+                    // Correct shape
+                    gameState.score += gameConfig.pointsPerCorrectCatch;
+                    scoreValue.textContent = gameState.score;
+                    
+                    // Show success message
+                    showMessage('Benar!', '#4CAF50');
+                    
+                    // Check if level up
+                    if (gameState.score >= gameState.level * gameConfig.scoreToNextLevel) {
+                        levelUp();
+                    }
+                } else {
+                    // Wrong shape
+                    gameState.time -= gameConfig.timePenalty;
+                    timeValue.textContent = Math.max(0, Math.floor(gameState.time));
+                    
+                    // Show error message
+                    showMessage('Salah!', '#F44336');
+                }
+                
+                // Set new target after a short delay
+                if (gameState.isPlaying) {
+                    setTimeout(setRandomTarget, 1000);
+                }
+            }
+        }
+
+        // Set a random target shape
+        function setRandomTarget() {
+            const prevTarget = gameState.targetShape;
+            let randomIndex;
+            
+            // Make sure we don't get the same target twice in a row if possible
+            do {
+                randomIndex = Math.floor(Math.random() * gameConfig.shapeTypes.length);
+            } while (gameConfig.shapeTypes[randomIndex].name === prevTarget && gameConfig.shapeTypes.length > 1);
+            
+            const target = gameConfig.shapeTypes[randomIndex];
+            gameState.targetShape = target.name;
+            
+            targetText.textContent = target.name;
+            
+            // Create an SVG element for the target icon
+            const svgContent = target.icon.replace(/fill="[^"]+"/g, 'fill="white"');
+            targetImg.outerHTML = `<div id="target-img" style="width:30px;height:30px;margin-left:0.5rem">${svgContent}</div>`;
+            targetImg = document.getElementById('target-img');
+            
+            // If in debug mode, force the current target shape to appear
+            if (gameConfig.debugMode && false) { // Disabled for now
+                setTimeout(() => createSpecificShape(target.name), 500);
+            }
+        }
+
+        // Level up function
+        function levelUp() {
+            gameState.level++;
+            levelValue.textContent = gameState.level;
+            gameState.time += gameConfig.timePerLevel;
+            timeValue.textContent = Math.floor(gameState.time);
+            
+            // Show level up message
+            showMessage('Level Up!', '#FFC107');
+            
+            // Increase shape falling frequency
+            clearInterval(gameState.interval);
+            const newInterval = Math.max(600, gameConfig.shapeFallInterval - (gameState.level - 1) * 100);
+            gameState.interval = setInterval(createShape, newInterval);
+        }
+
+        // Show message in the game area
+        function showMessage(text, color) {
+            message.textContent = text;
+            message.style.color = color;
+            message.style.opacity = 1;
+            
+            setTimeout(() => {
+                message.style.opacity = 0;
+            }, 1000);
+        }
+
+        // Start the game
+        function startGame() {
+            // Reset game state
+            gameState.isPlaying = true;
+            gameState.score = 0;
+            gameState.level = 1;
+            
+            // Use the configured game time
+            gameState.time = gameState.settings.gameTime;
+            
+            scoreValue.textContent = gameState.score;
+            levelValue.textContent = gameState.level;
+            timeValue.textContent = Math.floor(gameState.time);
+            
+            // Reset shape statistics
+            gameState.shapeStats.total = 0;
+            for (const shape in gameState.shapeStats.types) {
+                gameState.shapeStats.types[shape] = 0;
+            }
+            updateDebugInfo();
+            
+            // Clear any existing shapes
+            gameState.shapes.forEach(shape => {
+                if (shape && shape.parentNode === gameArea) {
+                    gameArea.removeChild(shape);
+                }
+            });
+            gameState.shapes = [];
+            
+            // Center player
+            gameState.playerPosition = (gameArea.offsetWidth - player.offsetWidth) / 2;
+            updatePlayerPosition();
+            
+            // Hide all screens
+            startScreen.style.display = 'none';
+            tutorialScreen.style.display = 'none';
+            gameOverScreen.style.display = 'none';
+            settingsScreen.style.display = 'none';
+            
+            // Set random target
+            setRandomTarget();
+            
+            // Start shape spawning with a variety of shapes
+            clearInterval(gameState.interval);
+            gameState.interval = setInterval(createShape, gameConfig.shapeFallInterval);
+            
+            // Create initial shapes to start the game
+            createShape(); // First shape immediately
+            setTimeout(() => createShape(), 1000);
+            setTimeout(() => createShape(), 2000);
+            
+            // Make sure we create a balok early on for testing
+            setTimeout(() => createSpecificShape('Balok'), 3000);
+            
+            // Start timer
+            const timerInterval = setInterval(() => {
+                if (!gameState.isPlaying) {
+                    clearInterval(timerInterval);
+                    return;
+                }
+                
+                gameState.time -= 0.1;
+                timeValue.textContent = Math.max(0, Math.floor(gameState.time));
+                
+                if (gameState.time <= 0) {
+                    gameOver();
+                    clearInterval(timerInterval);
+                }
+            }, 100);
+        }
+
+        // Game over function
+        function gameOver() {
+            gameState.isPlaying = false;
+            clearInterval(gameState.interval);
+            
+            // Clear any existing shapes
+            gameState.shapes.forEach(shape => {
+                if (shape && shape.parentNode === gameArea) {
+                    gameArea.removeChild(shape);
+                }
+            });
+            gameState.shapes = [];
+            
+            // Show game over screen
+            gameOverScreen.style.display = 'flex';
+            finalScore.textContent = gameState.score;
+        }
+
+        // Game loop
+        function gameLoop() {
+            if (gameState.isPlaying) {
+                // Update player position based on keys
+                if (gameState.keys.left) {
+                    gameState.playerPosition -= gameConfig.playerSpeed;
+                }
+                if (gameState.keys.right) {
+                    gameState.playerPosition += gameConfig.playerSpeed;
+                }
+                
+                updatePlayerPosition();
+            }
+            
+            requestAnimationFrame(gameLoop);
+        }
+    </script>
+</body>
+</html>
